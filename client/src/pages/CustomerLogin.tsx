@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -18,163 +17,93 @@ const CustomerLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // In a real app, we would check against a database
-  // For now, we'll simulate with localStorage
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-    const customer = customers.find((c: any) => c.email === email && c.password === password);
-    
-    if (customer) {
-      localStorage.setItem('currentCustomer', JSON.stringify(customer));
-      toast({
-        title: "Login successful",
-        description: `Welcome back, ${customer.name}!`,
+    try {
+      const res = await fetch('http://localhost:3000/api/customers/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Login failed');
+
+      localStorage.setItem('currentCustomer', JSON.stringify(data.customer));
+      toast({ title: 'Login successful', description: `Welcome back, ${data.customer.name}` });
       navigate('/customer-dashboard');
-    } else {
-      toast({
-        title: "Login failed",
-        description: "Account not found. Please register.",
-        variant: "destructive",
-      });
+    } catch (err: any) {
+      toast({ title: 'Login failed', description: err.message, variant: 'destructive' });
       setShowRegister(true);
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const customers = JSON.parse(localStorage.getItem('customers') || '[]');
-    const existingCustomer = customers.find((c: any) => c.email === registerEmail);
-    
-    if (existingCustomer) {
-      toast({
-        title: "Registration failed",
-        description: "An account with this email already exists.",
-        variant: "destructive",
+    try {
+      const res = await fetch('http://localhost:3000/api/customers/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email: registerEmail, password: registerPassword }),
       });
-      return;
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Registration failed');
+
+      toast({ title: 'Registered successfully', description: 'You can now log in' });
+      setShowRegister(false);
+    } catch (err: any) {
+      toast({ title: 'Registration error', description: err.message, variant: 'destructive' });
     }
-    
-    const newCustomer = { 
-      id: Date.now().toString(), 
-      name, 
-      email: registerEmail, 
-      password: registerPassword 
-    };
-    
-    customers.push(newCustomer);
-    localStorage.setItem('customers', JSON.stringify(customers));
-    localStorage.setItem('currentCustomer', JSON.stringify(newCustomer));
-    
-    toast({
-      title: "Registration successful",
-      description: "Your account has been created!",
-    });
-    
-    setShowRegister(false);
-    navigate('/customer-dashboard');
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6">Sri Sendhur Tex</h1>
-        
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-xl text-center">Customer Login</CardTitle>
-          </CardHeader>
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password" 
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" className="w-full">Login</Button>
-              <Button 
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowRegister(true)}
-              >
-                Register New Account
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full"
-                onClick={() => navigate('/')}
-              >
-                Back
-              </Button>
-            </CardFooter>
+    <div className="min-h-screen flex justify-center items-center bg-gray-100 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Customer Login</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <Label>Email</Label>
+              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div>
+              <Label>Password</Label>
+              <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            </div>
+            <Button type="submit" className="w-full">Login</Button>
+            <p className="text-sm text-center">
+              Don’t have an account?{' '}
+              <button type="button" className="underline" onClick={() => setShowRegister(true)}>
+                Register
+              </button>
+            </p>
           </form>
-        </Card>
-      </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={showRegister} onOpenChange={setShowRegister}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Account</DialogTitle>
+            <DialogTitle>Register as Customer</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleRegister} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input 
-                id="name" 
-                placeholder="Enter your full name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+            <div>
+              <Label>Name</Label>
+              <Input value={name} onChange={e => setName(e.target.value)} required />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="register-email">Email</Label>
-              <Input 
-                id="register-email" 
-                type="email" 
-                placeholder="Enter your email"
-                value={registerEmail}
-                onChange={(e) => setRegisterEmail(e.target.value)}
-                required
-              />
+            <div>
+              <Label>Email</Label>
+              <Input type="email" value={registerEmail} onChange={e => setRegisterEmail(e.target.value)} required />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="register-password">Password</Label>
-              <Input 
-                id="register-password" 
-                type="password" 
-                placeholder="Create a password"
-                value={registerPassword}
-                onChange={(e) => setRegisterPassword(e.target.value)}
-                required
-              />
+            <div>
+              <Label>Password</Label>
+              <Input type="password" value={registerPassword} onChange={e => setRegisterPassword(e.target.value)} required />
             </div>
             <DialogFooter>
-              <Button type="submit" className="w-full">Register</Button>
+              <Button type="submit">Register</Button>
             </DialogFooter>
           </form>
         </DialogContent>

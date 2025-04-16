@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import productRoutes from './routes/productRoutes.js';
+import customerRoutes from './routes/customerRoutes.js';
 
 dotenv.config();
 
@@ -11,8 +12,9 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/products', productRoutes);
-app.use('/api',productRoutes)
-console.log('process.env:', process.env.MONGO_URI);
+app.use('/api', productRoutes);
+app.use('/api/customers', customerRoutes); // 🔥 Added customer routes
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB connected');
